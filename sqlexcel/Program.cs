@@ -9,7 +9,7 @@ namespace sqlexcel
 {
     public class Options
     {
-        [Option(Required = false, HelpText = "Database server type")]
+        [Option(Required = true, HelpText = "Database server type")]
         public string dbtype { get; set; }
         [Option(Required = false, HelpText = "IP or hostname of database server")]
         public string host { get; set; }
@@ -34,11 +34,11 @@ namespace sqlexcel
   .WithNotParsed<Options>((errs) => HandleParseError(errs));
         }
 
-        private static void HandleParseError(IEnumerable<Error> errs)
+        static void HandleParseError(IEnumerable<Error> errs)
         {
         }
 
-        private static void RunOptionsAndReturnExitCode(Options opts)
+        static void RunOptionsAndReturnExitCode(Options opts)
         {
             IDBWrapper wrap = null;
 

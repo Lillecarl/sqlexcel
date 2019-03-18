@@ -19,6 +19,8 @@ namespace libsqlexcel
                 Password = pass,
                 Port = port,
                 ConvertZeroDateTime = true,
+		ConnectionTimeout = 500000,
+		DefaultCommandTimeout = 500000,
             };
 
             dbconn = new MySqlConnection(connectionstring.GetConnectionString(true));
@@ -37,18 +39,24 @@ namespace libsqlexcel
 
         public IEnumerable<string> GetDatabases()
         {
-            using (var reader = new MySql.Data.MySqlClient.MySqlCommand("SHOW DATABASES", dbconn).ExecuteReader())
+	    var databases = new List<string>();
+
+            using (var reader = new MySql.Data.MySqlClient.MySqlCommand("SELECT table_schema FROM INFORMATION_SCHEMA.tables GROUP BY table_schema", dbconn).ExecuteReader())
                 while (reader.Read())
-                    yield return reader.GetString(0);
+                    databases.Add(reader.GetString(0));
+
+	    return databases;
         }
 
         public IEnumerable<string> GetTables(string databasename)
         {
-            dbconn.ChangeDatabase(databasename);
+	    var tables = new List<string>();
 
-            using (var reader = new MySql.Data.MySqlClient.MySqlCommand("SHOW TABLES", dbconn).ExecuteReader())
+            using (var reader = new MySqlCommand(string.Format("SELECT table_name FROM INFORMATION_SCHEMA.tables WHERE table_schema = \"{0}\"", databasename), dbconn).ExecuteReader())
                 while (reader.Read())
-                    yield return reader.GetString(0);
+                    tables.Add(reader.GetString(0));
+
+	    return tables;
         }
 
         public DataTable GetTableRows(string databasename, string tablename)
@@ -57,10 +65,9 @@ namespace libsqlexcel
             var table = new DataTable();
 
             using (var command = new MySqlCommand(string.Format("SELECT * FROM {0}", tablename), dbconn))
-            {
                 using (var adapter = new MySqlDataAdapter(command))
                     adapter.Fill(table);
-            }
+
             return table;
         }
     }
