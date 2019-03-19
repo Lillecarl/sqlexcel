@@ -4,6 +4,7 @@ using libsqlexcel;
 using OfficeOpenXml;
 using CommandLine;
 using System.Collections.Generic;
+using System.Data;
 
 namespace sqlexcel
 {
@@ -74,14 +75,59 @@ namespace sqlexcel
                             Console.WriteLine("Exporting {0}.{1}", dbname, tablename);
 
                             string filename = Path.Combine(Directory.GetCurrentDirectory(), dbname, tablename + ".xlsx");
-                            var table = wrap.GetTableRows(dbname, tablename);
-                            new ExcelExporter().Export(table, filename);
+                            var tables = SplitTable(wrap.GetTableRows(dbname, tablename), 1000000);
+                            new ExcelExporter().Export(tables, filename);
                         }
                     }
                 }
             }
             else
                 Console.WriteLine("Could not connect to database");
+        }
+
+        private static IEnumerable<DataTable> SplitTable(DataTable originalTable, int batchSize)
+        {
+            List<DataTable> tables = new List<DataTable>();
+
+            if (originalTable.Rows.Count < batchSize)
+            {
+                tables.Add(originalTable);
+                return tables;
+            }
+
+            int i = 0;
+            int j = 1;
+            DataTable newDt = originalTable.Clone();
+            newDt.TableName = "Table_" + j;
+            newDt.Clear();
+
+            foreach (DataRow row in originalTable.Rows)
+            {
+                DataRow newRow = newDt.NewRow();
+                newRow.ItemArray = row.ItemArray;
+                newDt.Rows.Add(newRow);
+                i++;
+                if (i == batchSize)
+                {
+                    tables.Add(newDt);
+                    j++;
+                    newDt = originalTable.Clone();
+                    newDt.TableName = "Table_" + j;
+                    newDt.Clear();
+                    i = 0;
+                }
+            }
+
+            if (newDt.Rows.Count > 0)
+            {
+                tables.Add(newDt);
+                j++;
+                newDt = originalTable.Clone();
+                newDt.TableName = "Table_" + j;
+                newDt.Clear();
+
+            }
+            return tables;
         }
     }
 }
